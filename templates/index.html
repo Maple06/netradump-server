@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi Car Control</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fff;
+            color: #222;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            height: 100%;
+            width: 100vw;
+            position: relative;
+            background: #fff;
+        }
+        #header {
+            width: 100vw;
+            padding-top: 1.5rem;
+            padding-bottom: 0.5rem;
+            background: #fff;
+            text-align: center;
+        }
+        #title {
+            color: #1877f2;
+            font-size: 2.2rem;
+            margin-bottom: 0.2rem;
+        }
+        #status {
+            font-size: 1.1rem;
+            color: #228B22;
+            margin-bottom: 0.5rem;
+        }
+        #video-container {
+            flex: 1;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+        }
+        #video-stream {
+            max-width: 90vw;
+            max-height: 70vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            background-color: #eee;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        #bottom-bar {
+            width: 100vw;
+            background: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem 0;
+            border-top: 1px solid #e0e0e0;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.03);
+        }
+        #bottom-bar p {
+            margin: 0 2rem;
+            font-size: 1.3rem;
+            color: #222;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-container">
+        <div id="header">
+            <div id="title">Live Video Feed</div>
+            <div id="status">Connecting...</div>
+        </div>
+        <div id="video-container">
+            <img id="video-stream" src="{{ url_for('video_feed') }}" alt="Live Stream">
+        </div>
+        <div id="bottom-bar">
+            <p><strong>Steering:</strong> <span id="steering">0</span></p>
+            <p><strong>Throttle:</strong> <span id="throttle">0</span>%</p>
+        </div>
+    </div>
+
+    <script>
+        // Your existing JavaScript for the WebSocket connection goes here.
+        // No changes are needed for the JavaScript part.
+        const WEBSOCKET_URI = "ws://{{ ip }}:8765";
+
+        const statusElem = document.getElementById('status');
+        const steeringElem = document.getElementById('steering');
+        const throttleElem = document.getElementById('throttle');
+
+        let mode = "Maju";
+        function connect() {
+            const ws = new WebSocket(WEBSOCKET_URI);
+
+            ws.onopen = () => {
+                console.log("Connected to WebSocket server!");
+                statusElem.textContent = "Connected";
+                statusElem.style.color = "#228B22";
+                ws.send("web_client");
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const steeringValue = (data.setir || 0.0) * 100;
+                steeringElem.textContent = steeringValue.toFixed(0);
+
+                if (data.tombol && data.tombol[4] === 1) {
+                    mode = "Maju";
+                } else if (data.tombol && data.tombol[5] === 1) {
+                    mode = "Mundur";
+                }
+
+                const throttleValue = 100 - ((data.gas || 0.0) + 1) * 50;
+                if (mode) {
+                    throttleElem.textContent = `${mode} ${throttleValue.toFixed(0)}`;
+                } else {
+                    throttleElem.textContent = `${throttleValue.toFixed(0)}`;
+                }
+            };
+
+            ws.onclose = () => {
+                console.log("Disconnected. Reconnecting in 3 seconds...");
+                statusElem.textContent = "Disconnected. Retrying...";
+                statusElem.style.color = "#B22222";
+                setTimeout(connect, 3000);
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket Error:", error);
+                statusElem.textContent = "Connection Error";
+                statusElem.style.color = "#B22222";
+                ws.close();
+            };
+        }
+
+        connect();
+    </script>
+
+</body>
+</html>
