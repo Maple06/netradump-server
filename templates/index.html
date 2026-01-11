@@ -1,161 +1,486 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raspberry Pi Car Control</title>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #fff;
-            color: #222;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        #main-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            height: 100%;
-            width: 100vw;
-            position: relative;
-            background: #fff;
-        }
-        #header {
-            width: 100vw;
-            padding-top: 1.5rem;
-            padding-bottom: 0.5rem;
-            background: #fff;
-            text-align: center;
-        }
-        #title {
-            color: #1877f2;
-            font-size: 2.2rem;
-            margin-bottom: 0.2rem;
-        }
-        #status {
-            font-size: 1.1rem;
-            color: #228B22;
-            margin-bottom: 0.5rem;
-        }
-        #video-container {
-            flex: 1;
-            width: 100vw;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #fff;
-        }
-        #video-stream {
-            max-width: 90vw;
-            max-height: 70vh;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            background-color: #eee;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-        }
-        #bottom-bar {
-            width: 100vw;
-            background: #f7f7f7;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem 0;
-            border-top: 1px solid #e0e0e0;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.03);
-        }
-        #bottom-bar p {
-            margin: 0 2rem;
-            font-size: 1.3rem;
-            color: #222;
-            letter-spacing: 1px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NETRADUMP - Robot Control Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ===================== GLOBAL ===================== */
+:root {
+  --bg-main: #020617;
+  --bg-card: #020617;
+  --border-soft: rgba(255,255,255,0.08);
+
+  --safe: #22c55e;
+  --warn: #facc15;
+  --danger: #ef4444;
+  --info: #38bdf8;
+
+  --text-main: #e5e7eb;
+  --text-soft: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #020617, #020617);
+  color: var(--text-main);
+}
+
+/* ===================== DASHBOARD ===================== */
+.dashboard-container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* ===================== HEADER ===================== */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 18px 22px;
+  border: 1px solid var(--border-soft);
+  margin-bottom: 20px;
+}
+
+/* Branding */
+.branding {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.logo-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+.branding-text h1 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.branding-text p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* ===================== STATUS ===================== */
+.status-header {
+  display: flex;
+  gap: 12px;
+}
+
+.status-item-header {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: #020617;
+  min-width: 100px;
+  text-align: center;
+}
+
+.status-label-header {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.status-value-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.status-dot-header {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-online {
+  color: var(--safe);
+}
+.status-online .status-dot-header {
+  background: var(--safe);
+}
+
+.status-offline {
+  color: var(--danger);
+}
+.status-offline .status-dot-header {
+  background: var(--danger);
+}
+
+.status-connected {
+  color: var(--info);
+}
+.status-connected .status-dot-header {
+  background: var(--info);
+}
+
+/* ===================== SENSOR CARD ===================== */
+.sensor-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  padding: 18px;
+}
+
+.sensor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.sensor-title {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sensor-status {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(34,197,94,0.15);
+  color: var(--safe);
+}
+
+/* ===================== SENSOR DISPLAY ===================== */
+.sensor-display {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.sensor-item {
+  background: #020617;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.sensor-label {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+}
+
+.sensor-value {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.sensor-safe { color: var(--safe); }
+.sensor-warning { color: var(--warn); }
+.sensor-danger { color: var(--danger); }
+
+.sensor-info { color: #38bdf8; }
+
+/* ===================== SENSOR BAR ===================== */
+.sensor-visual {
+  height: 90px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sensor-wave {
+  width: 100%;
+  background: linear-gradient(180deg, #38bdf8, #6366f1);
+  transition: height 0.3s ease;
+}
+</style>
 </head>
+
 <body>
 
-    <div id="main-container">
-        <div id="header">
-            <div id="title">Live Video Feed</div>
-            <div id="status">Connecting...</div>
-        </div>
-        <div id="video-container">
-            <img id="video-stream" src="{{ url_for('video_feed') }}" alt="Live Stream">
-        </div>
-        <div id="bottom-bar">
-            <p><strong>Steering:</strong> <span id="steering">0</span></p>
-            <p><strong>Throttle:</strong> <span id="throttle">0</span>%</p>
-        </div>
+<div class="dashboard-container">
+
+<header class="dashboard-header">
+  <div class="branding">
+    <div class="logo-icon"><i class="fas fa-robot"></i></div>
+    <div class="branding-text">
+      <h1>NETRADUMP</h1>
+      <p>Zero Contact Robot Dashboard</p>
+    </div>
+  </div>
+
+  <div class="status-header">
+    <div class="status-item-header status-online">
+      <div class="status-label-header">KAMERA</div>
+      <div class="status-value-header">
+        <span class="status-dot-header"></span>ONLINE
+      </div>
     </div>
 
-    <script>
-        // Your existing JavaScript for the WebSocket connection goes here.
-        // No changes are needed for the JavaScript part.
-        const WEBSOCKET_URI = "ws://{{ ip }}:8765";
+    <div class="status-item-header status-offline">
+      <div class="status-label-header">AI</div>
+      <div class="status-value-header">
+        <span class="status-dot-header"></span>OFFLINE
+      </div>
+    </div>
 
-        const statusElem = document.getElementById('status');
-        const steeringElem = document.getElementById('steering');
-        const throttleElem = document.getElementById('throttle');
+    <div class="status-item-header status-connected">
+      <div class="status-label-header">CONTROL</div>
+      <div class="status-value-header">
+        <span class="status-dot-header"></span>CONNECTED
+      </div>
+    </div>
 
-        let mode = "Maju";
-        function connect() {
-            const ws = new WebSocket(WEBSOCKET_URI);
+    <div class="status-item-header status-offline" id="status-robot-header">
+      <div class="status-label-header">ROBOT</div>
+      <div class="status-value-header">
+        <span class="status-dot-header"></span>
+        <span id="robot-status-text">OFFLINE</span>
+      </div>
+    </div>
+  </div>
+</header>
 
-            ws.onopen = () => {
-                console.log("Connected to WebSocket server!");
-                statusElem.textContent = "Connected";
-                statusElem.style.color = "#228B22";
-                ws.send("web_client");
-            };
+<!-- ULTRASONIC SENSOR CARD -->
+<div class="sensor-card">
+  <div class="sensor-header">
+    <div class="sensor-title">
+      <i class="fas fa-satellite-dish"></i> Ultrasonic Sensor
+    </div>
+    <div class="sensor-status">ACTIVE</div>
+  </div>
 
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                const steeringValue = (data.setir || 0.0) * 100;
-                steeringElem.textContent = steeringValue.toFixed(0);
+  <div class="sensor-display">
+    <div class="sensor-item">
+      <div class="sensor-label">FRONT</div>
+      <div class="sensor-value sensor-safe" id="front-sensor-value">0 cm</div>
+      <div class="sensor-visual">
+        <div class="sensor-wave" id="front-sensor-wave" style="height:10%"></div>
+      </div>
+    </div>
 
-                if (data.tombol && data.tombol[4] === 1) {
-                    mode = "Maju";
-                } else if (data.tombol && data.tombol[5] === 1) {
-                    mode = "Mundur";
-                }
+    <div class="sensor-item">
+      <div class="sensor-label">REAR</div>
+      <div class="sensor-value sensor-safe" id="rear-sensor-value">0 cm</div>
+      <div class="sensor-visual">
+        <div class="sensor-wave" id="rear-sensor-wave" style="height:10%"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-                const throttleValue = 100 - ((data.gas || 0.0) + 1) * 50;
-                if (mode) {
-                    throttleElem.textContent = `${mode} ${throttleValue.toFixed(0)}`;
-                } else {
-                    throttleElem.textContent = `${throttleValue.toFixed(0)}`;
-                }
-            };
+<!-- CONTROL DATA CARD (Separate card) -->
+<div class="sensor-card" style="margin-top: 20px;">
+  <div class="sensor-header">
+    <div class="sensor-title">
+      <i class="fas fa-gamepad"></i> Control Data
+    </div>
+    <div class="sensor-status">LIVE</div>
+  </div>
 
-            ws.onclose = () => {
-                console.log("Disconnected. Reconnecting in 3 seconds...");
-                statusElem.textContent = "Disconnected. Retrying...";
-                statusElem.style.color = "#B22222";
-                setTimeout(connect, 3000);
-            };
+  <div class="sensor-display">
+    <div class="sensor-item">
+      <div class="sensor-label">STEERING</div>
+      <div class="sensor-value sensor-info" id="steering-display">0</div>
+      <div class="sensor-visual">
+        <div class="sensor-wave" style="background: linear-gradient(180deg, #f97316, #f59e0b);" 
+             id="steering-wave"></div>
+      </div>
+    </div>
 
-            ws.onerror = (error) => {
-                console.error("WebSocket Error:", error);
-                statusElem.textContent = "Connection Error";
-                statusElem.style.color = "#B22222";
-                ws.close();
-            };
-        }
+    <div class="sensor-item">
+      <div class="sensor-label">THROTTLE</div>
+      <div class="sensor-value sensor-info" id="throttle-display">0%</div>
+      <div class="sensor-visual">
+        <div class="sensor-wave" style="background: linear-gradient(180deg, #10b981, #34d399);" 
+             id="throttle-wave"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div style="margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+    <div class="sensor-label">ROBOT MODE</div>
+    <div style="font-size: 16px; font-weight: bold; color: #38bdf8;" id="robot-mode">
+      MAJU
+    </div>
+  </div>
+</div>
 
-        connect();
-    </script>
+</div>
+
+<script>
+/* ===============================
+   WEBSOCKET CONFIG
+=============================== */
+const WS_URL = "ws://" + window.location.hostname + ":5000/ws_controller";
+let ws;
+let lastRobotMode = "MAJU"; // Track mode locally
+
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    console.log("✅ Connected to Flask WebSocket");
+    setRobotStatus(true);
+  };
+
+  ws.onclose = () => {
+    console.log("❌ Disconnected from Flask");
+    setRobotStatus(false);
+    setTimeout(connectWS, 2000);
+  };
+
+  ws.onerror = (error) => {
+    console.error("WebSocket error:", error);
+    ws.close();
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log("Received data:", data);
+      updateAllData(data);
+    } catch (e) {
+      console.error("JSON Error", e);
+    }
+  };
+}
+
+function updateAllData(data) {
+  // Update steering and throttle with visual bars
+  updateControlData(data);
+  
+  // Update ultrasonic sensors (persisted values)
+  const ultrasonic = data.ultrasonic || {};
+  updateSensors(ultrasonic.front || 0, ultrasonic.back || 0);
+  
+  // Update mode (persists last set value)
+  updateMode(data.mode || lastRobotMode);
+}
+
+function updateControlData(data) {
+  const steering = data.steering || 0;
+  const throttle = data.throttle || 0;
+  
+  console.log(`Steering: ${steering}, Throttle: ${throttle}`);
+  
+  // Update steering display
+  const steeringEl = document.getElementById('steering-display');
+  const steeringWave = document.getElementById('steering-wave');
+  if (steeringEl) steeringEl.textContent = steering;
+  if (steeringWave) {
+    const steeringPercent = Math.abs(steering) / 100 * 100;
+    steeringWave.style.height = `${Math.min(100, steeringPercent)}%`;
+  }
+  
+  // Update throttle display
+  const throttleEl = document.getElementById('throttle-display');
+  const throttleWave = document.getElementById('throttle-wave');
+  if (throttleEl) throttleEl.textContent = `${throttle}%`;
+  if (throttleWave) {
+    throttleWave.style.height = `${Math.min(100, throttle)}%`;
+  }
+}
+
+function updateMode(mode) {
+  const modeEl = document.getElementById('robot-mode');
+  if (modeEl && mode) {
+    lastRobotMode = mode; // Persist mode locally
+    modeEl.textContent = `Mode: ${mode}`;
+    
+    // Color coding for mode
+    if (mode === "MAJU") {
+      modeEl.style.color = "#22c55e"; // Green for MAJU
+    } else if (mode === "MUNDUR") {
+      modeEl.style.color = "#ef4444"; // Red for MUNDUR
+    } else {
+      modeEl.style.color = "#38bdf8"; // Blue for STANDBY
+    }
+  }
+}
+
+function updateSensors(front, rear) {
+  setSensor("front", front);
+  setSensor("rear", rear);
+}
+
+function setSensor(pos, val) {
+  const valueEl = document.getElementById(`${pos}-sensor-value`);
+  const waveEl = document.getElementById(`${pos}-sensor-wave`);
+  
+  if (!valueEl || !waveEl) return;
+
+  // Format value
+  let displayValue = val;
+  if (val === -1) {
+    displayValue = "N/A";
+    valueEl.textContent = "N/A";
+    valueEl.className = "sensor-value sensor-danger";
+    waveEl.style.height = "5%";
+    return;
+  }
+  
+  valueEl.textContent = `${displayValue.toFixed(1)} cm`;
+
+  // Color coding based on distance
+  if (val <= 10) {
+    valueEl.className = "sensor-value sensor-danger";
+  } else if (val <= 50) {
+    valueEl.className = "sensor-value sensor-warning";
+  } else {
+    valueEl.className = "sensor-value sensor-safe";
+  }
+
+  // Visual bar (inverse: closer = taller bar)
+  const h = Math.max(5, Math.min(95, 100 - (val / 200 * 100)));
+  waveEl.style.height = `${h}%`;
+}
+
+function setRobotStatus(online) {
+  const el = document.getElementById("status-robot-header");
+  const txt = document.getElementById("robot-status-text");
+
+  if (el && txt) {
+    el.className = online
+      ? "status-item-header status-online"
+      : "status-item-header status-offline";
+
+    txt.textContent = online ? "ONLINE" : "OFFLINE";
+  }
+}
+
+/* ===============================
+   INIT
+=============================== */
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("Dashboard initialized");
+  connectWS();
+  
+  // Set initial mode display
+  updateMode("MAJU");
+});
+</script>
 
 </body>
 </html>
