@@ -1,7 +1,11 @@
 @echo off
-cd "D:\Programming\Projects\netradump"
+echo ================================
+echo     Starting Flask Server & Steer
+echo ================================
+echo.
 
-start "Flask App" python app.py
-start "Steering Wheel" python Steer.py
+start "Flask" python app.py
+timeout /t 1 >nul
+start "Steer" python Steer.py
 
-start http://127.0.0.1:5000
+pause
