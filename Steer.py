@@ -5,7 +5,7 @@ import asyncio
 import websockets
 import json
 
-ip = "192.168.1.202"
+ip = "100.114.16.27"
 
 # Inisialisasi Pygame dan Joystick
 pygame.init()
