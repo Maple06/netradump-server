@@ -90,9 +90,9 @@ def build_data_paket():
     gripper_open = arm_buttons[0] == 1 if len(arm_buttons) > 0 else False
     gripper_closed = arm_buttons[1] == 1 if len(arm_buttons) > 1 else False
     if gripper_open and not gripper_closed:
-        gripper = "open"
-    elif gripper_closed and not gripper_open:
         gripper = "closed"
+    elif gripper_closed and not gripper_open:
+        gripper = "open"
     else:
         gripper = "idle"
 
