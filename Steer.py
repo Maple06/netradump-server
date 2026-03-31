@@ -25,10 +25,10 @@ try:
                 return candidate, idx
         return None, None
 
-    wheel_joy, wheel_index = find_joystick("Racing Wheel")
+    wheel_joy, wheel_index = find_joystick("G923")
     if wheel_joy is None:
         raise pygame.error(
-            f"Joystick wheel dengan nama mengandung 'Racing Wheel' tidak terdeteksi. Total device: {pygame.joystick.get_count()}"
+            f"Joystick wheel dengan nama mengandung 'G923' tidak terdeteksi. Total device: {pygame.joystick.get_count()}"
         )
 
     arm_joy, arm_index = find_joystick("Extreme 3D")
@@ -39,9 +39,25 @@ try:
 
     print(f"Server siap. Wheel: {wheel_joy.get_name()} (index={wheel_index})")
     print(f"Server siap. Arm:   {arm_joy.get_name()} (index={arm_index})")
-except pygame.error:
-    print("Joystick tidak terdeteksi. Pastikan sudah terhubung.")
-    exit()
+except pygame.error as e:
+    detected = []
+    try:
+        for idx in range(pygame.joystick.get_count()):
+            joy = pygame.joystick.Joystick(idx)
+            joy.init()
+            detected.append(joy.get_name())
+    except pygame.error:
+        pass
+
+    print("Joystick tidak terdeteksi / tidak sesuai.")
+    print(f"Alasan: {e}")
+    print(f"Total device terdeteksi: {pygame.joystick.get_count()}")
+    if detected:
+        print("Daftar device:")
+        for name in detected:
+            print(f"- {name}")
+    print("Pastikan Logitech wheel (mengandung 'Racing Wheel') dan joystick (mengandung 'Extreme 3D') sudah terhubung.")
+    raise SystemExit(1)
 
 
 def build_data_paket():
@@ -96,6 +112,8 @@ def build_data_paket():
     else:
         gripper = "idle"
 
+    tombol_states = [wheel_joy.get_button(i) for i in range(wheel_joy.get_numbuttons())]
+
     return {
         "setir": wheel_joy.get_axis(0),
         "gas": wheel_joy.get_axis(2),
@@ -104,6 +122,7 @@ def build_data_paket():
         "elbow": elbow,
         "wrist": wrist,
         "gripper": gripper,
+        "tombol": tombol_states
     }
 
 
