@@ -440,7 +440,6 @@ function connectWS() {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log("Received data:", data);
       updateAllData(data);
     } catch (e) {
       console.error("JSON Error", e);
@@ -456,15 +455,14 @@ function updateAllData(data) {
   const ultrasonic = data.ultrasonic || {};
   updateSensors(ultrasonic.front || 0, ultrasonic.back || 0);
   
-  // Update mode (persists last set value)
-  updateMode(data.mode || lastRobotMode);
+  if (data.mode) {
+    updateMode(data.mode);
+  }
 }
 
 function updateControlData(data) {
   const steering = data.steering || 0;
   const throttle = data.throttle || 0;
-  
-  console.log(`Steering: ${steering}, Throttle: ${throttle}`);
   
   // Update steering display
   const steeringEl = document.getElementById('steering-display');
@@ -472,12 +470,10 @@ function updateControlData(data) {
   if (steeringEl) steeringEl.textContent = `${steering}%`;
   
   if (steeringIcon) {
-    // Map -100 to 100 percentage to -135 to 135 degrees of rotation for clear visual feedback
     const degrees = (steering / 100) * 135;
     steeringIcon.style.transform = `rotate(${degrees}deg)`;
   }
   
-  // Update throttle display
   const throttleEl = document.getElementById('throttle-display');
   const throttleWave = document.getElementById('throttle-wave');
   if (throttleEl) throttleEl.textContent = `${throttle}%`;
@@ -485,28 +481,32 @@ function updateControlData(data) {
     throttleWave.style.height = `${Math.min(100, Math.abs(throttle))}%`;
   }
 
-  // Debug buttons
   const dbg = document.getElementById("debug-buttons");
-  if (dbg && data.buttons && Array.isArray(data.buttons)) {
-    const pressed = data.buttons.map((v, i) => v === 1 ? i : -1).filter(i => i !== -1);
-    dbg.textContent = pressed.length ? pressed.join(', ') : "None";
+  if (dbg) {
+    let displayText = "None";
+    if (data.buttons && Array.isArray(data.buttons)) {
+      const pressed = data.buttons.map((v, i) => v === 1 ? i : -1).filter(i => i !== -1);
+      displayText = pressed.length > 0 ? pressed.join(', ') : "None";
+    }
+    dbg.textContent = displayText;
   }
-}
+} 
 
 function updateMode(mode) {
   const modeEl = document.getElementById('robot-mode');
-  if (modeEl && mode) {
-    lastRobotMode = mode; // Persist mode locally
-    modeEl.textContent = mode;
-    
-    // Color coding for mode
-    if (mode === "MAJU") {
-      modeEl.style.color = "#22c55e"; // Green for MAJU
-    } else if (mode === "MUNDUR") {
-      modeEl.style.color = "#ef4444"; // Red for MUNDUR
-    } else {
-      modeEl.style.color = "#38bdf8"; // Blue for STANDBY
-    }
+  if (!modeEl || !mode) {
+    return;
+  }
+
+  lastRobotMode = mode;
+  modeEl.textContent = mode;
+
+  if (mode === "MAJU") {
+    modeEl.style.color = "#22c55e";
+  } else if (mode === "MUNDUR") {
+    modeEl.style.color = "#ef4444";
+  } else {
+    modeEl.style.color = "#38bdf8";
   }
 }
 

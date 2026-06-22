@@ -69,7 +69,6 @@ def controller_data(ws):
                 break
             
             data = json.loads(msg)
-            
             with threading.Lock():
                 robot_state["steering"] = data.get("steering", 0)
                 robot_state["throttle"] = data.get("throttle", 0)
@@ -87,7 +86,6 @@ def controller_data(ws):
                         robot_state["mode"] = "MAJU"
                     elif buttons[5] == 1:
                         robot_state["mode"] = "MUNDUR"
-                
                 robot_state["last_update"] = time.time()
             
             send_state_to_clients()
