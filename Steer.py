@@ -6,7 +6,8 @@ import websockets
 import json
 import time
 
-ip = "100.114.16.27"
+ip = "100.75.23.88" # Laptop Ari
+# ip = "100.114.16.27" # Laptop Malen
 
 latest_payload = None
 
