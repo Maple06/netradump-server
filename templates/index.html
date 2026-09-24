@@ -416,7 +416,7 @@ body {
 =============================== */
 const WS_URL = "ws://" + window.location.hostname + ":5000/ws_controller";
 let ws;
-let lastRobotMode = "MAJU"; // Track mode locally
+let lastRobotMode = "MAJU";
 
 function connectWS() {
   ws = new WebSocket(WS_URL);
@@ -448,12 +448,14 @@ function connectWS() {
 }
 
 function updateAllData(data) {
-  // Update steering and throttle with visual bars
   updateControlData(data);
   
-  // Update ultrasonic sensors (persisted values)
-  const ultrasonic = data.ultrasonic || {};
-  updateSensors(ultrasonic.front || 0, ultrasonic.back || 0);
+  if (data.ultrasonic) {
+    const front = (data.ultrasonic.front !== undefined) ? data.ultrasonic.front : -1;
+    const rear = (data.ultrasonic.back !== undefined) ? data.ultrasonic.back : 
+                 (data.ultrasonic.rear !== undefined) ? data.ultrasonic.rear : -1;
+    updateSensors(front, rear);
+  }
   
   if (data.mode) {
     updateMode(data.mode);
@@ -461,10 +463,9 @@ function updateAllData(data) {
 }
 
 function updateControlData(data) {
-  const steering = data.steering || 0;
-  const throttle = data.throttle || 0;
+  const steering = data.steering ?? 0;
+  const throttle = data.throttle ?? 0;
   
-  // Update steering display
   const steeringEl = document.getElementById('steering-display');
   const steeringIcon = document.getElementById('steering-wheel-svg');
   if (steeringEl) steeringEl.textContent = `${steering}%`;
@@ -494,9 +495,7 @@ function updateControlData(data) {
 
 function updateMode(mode) {
   const modeEl = document.getElementById('robot-mode');
-  if (!modeEl || !mode) {
-    return;
-  }
+  if (!modeEl || !mode) return;
 
   lastRobotMode = mode;
   modeEl.textContent = mode;
@@ -521,29 +520,26 @@ function setSensor(pos, val) {
   
   if (!valueEl || !waveEl) return;
 
-  // Format value
-  let displayValue = val;
-  if (val === -1) {
-    displayValue = "N/A";
+  const numVal = parseFloat(val);
+
+  if (isNaN(numVal) || numVal < 0) {
     valueEl.textContent = "N/A";
     valueEl.className = "sensor-value sensor-danger";
     waveEl.style.height = "5%";
     return;
   }
   
-  valueEl.textContent = `${displayValue.toFixed(1)} cm`;
+  valueEl.textContent = `${numVal.toFixed(1)} cm`;
 
-  // Color coding based on distance
-  if (val <= 10) {
+  if (numVal <= 10) {
     valueEl.className = "sensor-value sensor-danger";
-  } else if (val <= 50) {
+  } else if (numVal <= 50) {
     valueEl.className = "sensor-value sensor-warning";
   } else {
     valueEl.className = "sensor-value sensor-safe";
   }
 
-  // Visual bar (inverse: closer = taller bar)
-  const h = Math.max(5, Math.min(95, 100 - (val / 200 * 100)));
+  const h = Math.max(5, Math.min(95, 100 - (numVal / 200 * 100)));
   waveEl.style.height = `${h}%`;
 }
 
@@ -560,14 +556,9 @@ function setRobotStatus(online) {
   }
 }
 
-/* ===============================
-   INIT
-=============================== */
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Dashboard initialized");
   connectWS();
-  
-  // Set initial mode display
   updateMode("MAJU");
 });
 </script>

@@ -1,4 +1,3 @@
-# flask app.py - UPDATED VERSION
 from flask import Flask, render_template, Response
 from flask_sock import Sock
 import threading
@@ -6,6 +5,8 @@ import json
 import time
 
 frame_lock = threading.Lock()
+state_lock = threading.Lock()
+
 current_frame = None
 controller_clients = set()
 raspberry_clients = set()
@@ -15,8 +16,8 @@ robot_state = {
     "throttle": 0,
     "mode": "MAJU",
     "ultrasonic": {
-        "front": 0,
-        "back": 0
+        "front": -1,
+        "back": -1
     },
     "buttons": [],
     "last_update": 0
@@ -56,10 +57,10 @@ def ws_stream(ws):
         with frame_lock:
             current_frame = data
 
-# WebSocket for controller data FROM Raspberry Pi
+# WebSocket for controller & sensor data FROM Raspberry Pi
 @sock.route('/controller_data')
 def controller_data(ws):
-    print("Raspberry Pi terhubung untuk controller data!")
+    print("Raspberry Pi terhubung untuk controller/sensor data!")
     raspberry_clients.add(ws)
     
     try:
@@ -68,37 +69,60 @@ def controller_data(ws):
             if msg is None:
                 break
             
-            data = json.loads(msg)
-            with threading.Lock():
-                robot_state["steering"] = data.get("steering", 0)
-                robot_state["throttle"] = data.get("throttle", 0)
-                robot_state["buttons"] = data.get("buttons", [])
-                
-                ultrasonic_data = data.get("ultrasonic", {})
-                if ultrasonic_data.get("front", -1) != -1:
-                    robot_state["ultrasonic"]["front"] = ultrasonic_data.get("front", 0)
-                if ultrasonic_data.get("back", -1) != -1:
-                    robot_state["ultrasonic"]["back"] = ultrasonic_data.get("back", 0)
-                
-                buttons = robot_state["buttons"]
-                if len(buttons) >= 6:
-                    if buttons[4] == 1:
-                        robot_state["mode"] = "MAJU"
-                    elif buttons[5] == 1:
-                        robot_state["mode"] = "MUNDUR"
+            try:
+                data = json.loads(msg)
+            except Exception:
+                continue
+
+            with state_lock:
+                # Update control attributes jika ada
+                if "steering" in data:
+                    robot_state["steering"] = data["steering"]
+                if "throttle" in data:
+                    robot_state["throttle"] = data["throttle"]
+                if "mode" in data:
+                    robot_state["mode"] = data["mode"]
+                if "buttons" in data:
+                    robot_state["buttons"] = data["buttons"]
+                    buttons = robot_state["buttons"]
+                    if len(buttons) >= 6:
+                        if buttons[4] == 1:
+                            robot_state["mode"] = "MAJU"
+                        elif buttons[5] == 1:
+                            robot_state["mode"] = "MUNDUR"
+
+                # Update ultrasonic readings jika ada
+                if "ultrasonic" in data and isinstance(data["ultrasonic"], dict):
+                    u_data = data["ultrasonic"]
+                    
+                    if "front" in u_data:
+                        val = u_data["front"]
+                        if val != -1 and val is not None:
+                            robot_state["ultrasonic"]["front"] = val
+
+                    if "back" in u_data:
+                        val = u_data["back"]
+                        if val != -1 and val is not None:
+                            robot_state["ultrasonic"]["back"] = val
+                    elif "rear" in u_data:
+                        val = u_data["rear"]
+                        if val != -1 and val is not None:
+                            robot_state["ultrasonic"]["back"] = val
+
                 robot_state["last_update"] = time.time()
             
             send_state_to_clients()
-    
+            
     except Exception as e:
-        print(f"Error in controller_data: {e}")
+        # Menagkap disconnection dengan bersih
+        pass
     finally:
         raspberry_clients.discard(ws)
         print("Raspberry Pi controller data disconnected")
 
 def send_state_to_clients():
-    """Send current state to all connected web clients"""
-    with threading.Lock():
+    """Send state update to all web clients"""
+    with state_lock:
         state_copy = robot_state.copy()
     
     message = json.dumps(state_copy)
@@ -106,10 +130,10 @@ def send_state_to_clients():
     for client in list(controller_clients):
         try:
             client.send(message)
-        except:
+        except Exception:
             controller_clients.discard(client)
 
-# WebSocket for web clients that want controller data
+# WebSocket for frontend dashboard clients
 @sock.route('/ws_controller')
 def ws_controller(ws):
     print("Web client connected for controller data")
@@ -117,27 +141,25 @@ def ws_controller(ws):
     
     try:
         send_state_to_clients()
-    except:
+    except Exception:
         pass
     
     try:
         while True:
             ws.receive(timeout=1)
-    except:
+    except Exception:
         pass
     finally:
         controller_clients.discard(ws)
         print("Web client disconnected from controller data")
 
-# Background thread to periodically send state even without updates
+# Background thread to broadcast state periodically
 def state_broadcaster():
-    """Periodically send state to keep clients updated"""
     while True:
-        time.sleep(0.5)  # Update every 500ms
+        time.sleep(0.05)  # 20 FPS broadcast
         if controller_clients:
             send_state_to_clients()
 
-# Start broadcaster thread
 broadcaster_thread = threading.Thread(target=state_broadcaster, daemon=True)
 broadcaster_thread.start()
 
